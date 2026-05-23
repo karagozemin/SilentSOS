@@ -77,7 +77,7 @@ export function getDispatchFromAgent(agentText: string): {
 }
 
 type DemoStep = {
-  delayMs: number;
+  pauseMs: number;
   role: "user" | "agent" | "dispatch" | "system";
   content: string;
   phase?: ConversationPhase;
@@ -85,59 +85,59 @@ type DemoStep = {
 
 export const DEMO_SCRIPT: DemoStep[] = [
   {
-    delayMs: 0,
+    pauseMs: 400,
     role: "system",
     content: "Demo mode started — simulation only",
     phase: "connecting",
   },
   {
-    delayMs: 1500,
+    pauseMs: 600,
     role: "user",
     content: "help… I can't talk",
     phase: "user_distress",
   },
   {
-    delayMs: 2500,
+    pauseMs: 400,
     role: "agent",
     content: "I'm here. I'll speak for you. What's happening?",
   },
   {
-    delayMs: 4000,
+    pauseMs: 500,
     role: "user",
     content: "someone is outside… I'm hiding",
   },
   {
-    delayMs: 6500,
+    pauseMs: 400,
     role: "agent",
     content:
       "Relaying to dispatch: Caller unable to speak clearly. Location Bornova, Izmir. Possible threat — caller is hiding. Are you safe?",
     phase: "relaying",
   },
   {
-    delayMs: 8000,
+    pauseMs: 500,
     role: "dispatch",
     content: "Dispatch: Awaiting safety confirmation from caller.",
     phase: "safety_check",
   },
   {
-    delayMs: 9000,
+    pauseMs: 400,
     role: "agent",
     content: "Are you safe? Say yes or no.",
   },
   {
-    delayMs: 11000,
+    pauseMs: 500,
     role: "user",
     content: "no",
   },
   {
-    delayMs: 12500,
+    pauseMs: 400,
     role: "agent",
     content:
       "Relaying to dispatch: Caller reports NOT safe. Requesting immediate assistance.",
     phase: "dispatch_confirmed",
   },
   {
-    delayMs: 13500,
+    pauseMs: 500,
     role: "dispatch",
     content: "Dispatch: Acknowledged. Help is being routed. Simulation complete.",
   },

@@ -54,6 +54,7 @@ export function SilentSOSApp() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoSpeaking, setDemoSpeaking] = useState(false);
   const [inputLevel, setInputLevel] = useState(0);
+  const demoAbortRef = useRef(false);
   const demoTimeouts = useRef<number[]>([]);
   const levelFrameRef = useRef<number | null>(null);
 
@@ -146,6 +147,7 @@ export function SilentSOSApp() {
   }, []);
 
   const resetSession = useCallback(() => {
+    demoAbortRef.current = true;
     clearDemoTimeouts();
     cancelDemoSpeech();
     setDemoSpeaking(false);
@@ -203,13 +205,19 @@ export function SilentSOSApp() {
 
   const startDemo = useCallback(() => {
     resetSession();
+    demoAbortRef.current = false;
     setIsDemoMode(true);
     setPhase("connecting");
 
-    let elapsed = 0;
-    for (const step of DEMO_SCRIPT) {
-      elapsed += step.delayMs;
-      const timeoutId = window.setTimeout(() => {
+    const run = async () => {
+      for (const step of DEMO_SCRIPT) {
+        if (demoAbortRef.current) return;
+
+        if (step.pauseMs > 0) {
+          await new Promise((r) => setTimeout(r, step.pauseMs));
+        }
+        if (demoAbortRef.current) return;
+
         if (step.phase) setPhase(step.phase);
         addEntry(step.role, step.content);
 
@@ -227,19 +235,18 @@ export function SilentSOSApp() {
           if (nextPhase) setPhase(nextPhase);
         }
 
-        speakDemoLine(
-          step.role,
-          step.content,
-          () => {
-            if (step.role === "agent" || step.role === "dispatch") {
-              setDemoSpeaking(true);
-            }
-          },
-          () => setDemoSpeaking(false),
-        );
-      }, elapsed);
-      demoTimeouts.current.push(timeoutId);
-    }
+        if (step.role === "agent" || step.role === "dispatch") {
+          setDemoSpeaking(true);
+        }
+
+        await speakDemoLine(step.role, step.content);
+
+        if (demoAbortRef.current) return;
+        setDemoSpeaking(false);
+      }
+    };
+
+    void run();
   }, [addDispatch, addEntry, resetSession]);
 
   useEffect(() => {

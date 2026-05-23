@@ -1,86 +1,106 @@
 export type DemoSpeaker = "user" | "agent" | "dispatch" | "system";
 
-let agentVoice: SpeechSynthesisVoice | null = null;
 let userVoice: SpeechSynthesisVoice | null = null;
+let currentAudio: HTMLAudioElement | null = null;
 
-function pickVoices() {
+function pickUserVoice() {
   if (typeof window === "undefined") return;
-
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return;
-
-  agentVoice =
-    voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        /samantha|karen|victoria|google.*english.*female|female/i.test(v.name),
-    ) ??
-    voices.find((v) => v.lang.startsWith("en")) ??
-    null;
 
   userVoice =
     voices.find(
       (v) =>
         v.lang.startsWith("en") &&
-        v !== agentVoice &&
         /daniel|alex|fred|google.*english.*male|male/i.test(v.name),
     ) ??
-    voices.find((v) => v.lang.startsWith("en") && v !== agentVoice) ??
-    agentVoice;
+    voices.find((v) => v.lang.startsWith("en")) ??
+    null;
 }
 
 export function initDemoSpeech() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-  pickVoices();
-  window.speechSynthesis.addEventListener("voiceschanged", pickVoices);
+  pickUserVoice();
+  window.speechSynthesis.addEventListener("voiceschanged", pickUserVoice);
 }
 
 export function cancelDemoSpeech() {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = "";
+    currentAudio = null;
+  }
 }
 
-export function speakDemoLine(
-  role: DemoSpeaker,
-  text: string,
-  onStart?: () => void,
-  onEnd?: () => void,
-) {
-  if (typeof window === "undefined" || !window.speechSynthesis) {
-    onEnd?.();
-    return;
-  }
+function speakBrowserUser(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      resolve();
+      return;
+    }
 
-  if (role === "system") {
-    onEnd?.();
-    return;
-  }
-
-  pickVoices();
-
-  const spoken =
-    role === "dispatch"
-      ? text.replace(/^Dispatch:\s*/i, "")
-      : text;
-
-  const utterance = new SpeechSynthesisUtterance(spoken);
-
-  if (role === "user") {
+    pickUserVoice();
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = userVoice;
     utterance.rate = 0.78;
     utterance.pitch = 0.92;
     utterance.volume = 0.5;
-  } else {
-    utterance.voice = agentVoice;
-    utterance.rate = role === "dispatch" ? 0.9 : 0.93;
-    utterance.pitch = role === "dispatch" ? 0.85 : 1;
-    utterance.volume = 1;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+async function speakElevenLabsAgent(text: string): Promise<void> {
+  const response = await fetch("/api/demo-tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!response.ok) {
+    console.warn("[SilentSOS demo] ElevenLabs TTS failed — agent line skipped");
+    return;
   }
 
-  utterance.onstart = () => onStart?.();
-  utterance.onend = () => onEnd?.();
-  utterance.onerror = () => onEnd?.();
+  const blob = await response.blob();
+  if (!blob.size) return;
 
-  window.speechSynthesis.speak(utterance);
+  const url = URL.createObjectURL(blob);
+
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    currentAudio = audio;
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      resolve();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      resolve();
+    };
+    void audio.play().catch(() => resolve());
+  });
+}
+
+export async function speakDemoLine(
+  role: DemoSpeaker,
+  text: string,
+): Promise<void> {
+  if (role === "system") return;
+
+  const spoken =
+    role === "dispatch" ? text.replace(/^Dispatch:\s*/i, "") : text;
+
+  if (role === "user") {
+    await speakBrowserUser(spoken);
+    return;
+  }
+
+  await speakElevenLabsAgent(spoken);
 }
