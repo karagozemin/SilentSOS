@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/silentsos-logo.png" alt="SilentSOS logo" width="280" />
+</p>
+
 # SilentSOS
 
 **When you can't speak, AI speaks for you.**
