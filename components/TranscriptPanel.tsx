@@ -1,7 +1,7 @@
 "use client";
 
 import type { TranscriptEntry } from "@/lib/types";
-import { useEffect, useRef } from "react";
+import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 
 type Props = {
   entries: TranscriptEntry[];
@@ -22,12 +22,7 @@ const roleLabels: Record<TranscriptEntry["role"], string> = {
 };
 
 export function TranscriptPanel({ entries }: Props) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [entries]);
+  const scrollRef = useStickToBottom(entries);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/80">
@@ -40,7 +35,7 @@ export function TranscriptPanel({ entries }: Props) {
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4"
       >
         {entries.length === 0 ? (
           <p className="text-sm text-zinc-600">

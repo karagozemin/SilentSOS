@@ -1,12 +1,15 @@
 "use client";
 
 import type { DispatchMessage } from "@/lib/types";
+import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 
 type Props = {
   messages: DispatchMessage[];
 };
 
 export function DispatchPanel({ messages }: Props) {
+  const scrollRef = useStickToBottom(messages);
+
   return (
     <section className="shrink-0 flex flex-col rounded-xl border border-amber-500/20 bg-amber-950/10">
       <div className="border-b border-amber-500/20 px-4 py-3">
@@ -18,7 +21,10 @@ export function DispatchPanel({ messages }: Props) {
         </h2>
       </div>
 
-      <div className="max-h-48 space-y-2 overflow-y-auto p-4">
+      <div
+        ref={scrollRef}
+        className="max-h-48 space-y-2 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4"
+      >
         {messages.length === 0 ? (
           <p className="font-mono text-sm text-amber-200/40">
             Waiting for relay…
