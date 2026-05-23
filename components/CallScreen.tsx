@@ -8,6 +8,7 @@ type Props = {
   isConnected: boolean;
   isSpeaking: boolean;
   isDemoMode: boolean;
+  inputLevel: number;
   onStart: () => void;
   onStop: () => void;
   onStartDemo: () => void;
@@ -28,6 +29,7 @@ export function CallScreen({
   isConnected,
   isSpeaking,
   isDemoMode,
+  inputLevel,
   onStart,
   onStop,
   onStartDemo,
@@ -83,6 +85,18 @@ export function CallScreen({
         )}
       </div>
 
+      {isConnected && (
+        <div className="mb-4 flex w-full max-w-sm items-center gap-3">
+          <span className="text-xs text-zinc-500">Mic</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-red-500 transition-[width] duration-75"
+              style={{ width: `${Math.min(100, Math.round(inputLevel * 100))}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex w-full max-w-sm flex-col gap-3">
         {!active ? (
           <>
@@ -113,8 +127,8 @@ export function CallScreen({
       </div>
 
       <p className="mt-6 max-w-xs text-center text-xs text-zinc-600">
-        Speak naturally or whisper. The AI relay agent will communicate on your
-        behalf to a simulated dispatch operator.
+        Speak naturally or whisper. Use headphones to avoid echo. The AI relay
+        agent will communicate on your behalf to a simulated dispatch operator.
       </p>
     </section>
   );

@@ -1,5 +1,12 @@
 import type { EmergencyProfile } from "@/lib/types";
 
+export async function wakeEngineServer(): Promise<void> {
+  const response = await fetch("/api/engine-health", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("Speech Engine server is waking up — try again in a few seconds");
+  }
+}
+
 export async function syncProfileToEngine(
   profile: EmergencyProfile,
 ): Promise<void> {

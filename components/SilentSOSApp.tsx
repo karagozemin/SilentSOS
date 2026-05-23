@@ -6,7 +6,7 @@ import { EmergencyProfileForm } from "@/components/EmergencyProfile";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { FIRST_MESSAGE } from "@/lib/agent-prompt";
 import { DEMO_SCRIPT, getDispatchResponse } from "@/lib/dispatch-script";
-import { syncProfileToEngine } from "@/lib/sync-profile";
+import { syncProfileToEngine, wakeEngineServer } from "@/lib/sync-profile";
 import type {
   ConversationPhase,
   DispatchMessage,
@@ -34,6 +34,14 @@ function loadStoredProfile(): EmergencyProfile {
   }
 }
 
+function isUserMessage(role?: string, source?: string) {
+  return role === "user" || source === "user";
+}
+
+function isAgentMessage(role?: string, source?: string) {
+  return role === "agent" || source === "ai";
+}
+
 export function SilentSOSApp() {
   const [profile, setProfile] = useState<EmergencyProfile>(loadStoredProfile);
   const [phase, setPhase] = useState<ConversationPhase>("idle");
@@ -42,7 +50,10 @@ export function SilentSOSApp() {
     [],
   );
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [inputLevel, setInputLevel] = useState(0);
+  const [micMuted, setMicMuted] = useState(false);
   const demoTimeouts = useRef<number[]>([]);
+  const levelFrameRef = useRef<number | null>(null);
 
   const addEntry = useCallback(
     (role: TranscriptEntry["role"], content: string) => {
@@ -76,17 +87,26 @@ export function SilentSOSApp() {
   );
 
   const conversation = useConversation({
+    micMuted,
     onConnect: () => {
       setPhase("listening");
       addEntry("system", "Voice connection established — speak now");
     },
-    onDisconnect: () => {
+    onDisconnect: (details) => {
       setPhase("idle");
-      addEntry("system", "Call ended");
+      if (details.reason === "error") {
+        addEntry("system", `Call dropped: ${details.message}`);
+      } else {
+        addEntry("system", "Call ended");
+      }
     },
     onError: (message) => {
       addEntry("system", `Error: ${message}`);
       setPhase("idle");
+    },
+    onModeChange: ({ mode }) => {
+      setMicMuted(mode === "speaking");
+      if (mode === "listening") setPhase("listening");
     },
     onInterruption: () => {
       setPhase("listening");
@@ -94,11 +114,10 @@ export function SilentSOSApp() {
     onMessage: ({ message, role, source }) => {
       if (!message) return;
 
-      const speaker = role ?? source;
-      if (speaker === "user") {
+      if (isUserMessage(role, source)) {
         addEntry("user", message);
         setPhase("user_distress");
-      } else {
+      } else if (isAgentMessage(role, source)) {
         handleAgentText(message);
       }
     },
@@ -126,8 +145,9 @@ export function SilentSOSApp() {
     setPhase("connecting");
 
     try {
+      addEntry("system", "Waking Speech Engine server…");
+      await wakeEngineServer();
       await syncProfile(profile);
-      await navigator.mediaDevices.getUserMedia({ audio: true });
 
       const tokenRes = await fetch("/api/token", { method: "POST" });
       if (!tokenRes.ok) {
@@ -194,6 +214,31 @@ export function SilentSOSApp() {
     return () => clearDemoTimeouts();
   }, [clearDemoTimeouts]);
 
+  useEffect(() => {
+    const isConnected = conversation.status === "connected";
+    if (!isConnected) {
+      setInputLevel(0);
+      if (levelFrameRef.current !== null) {
+        cancelAnimationFrame(levelFrameRef.current);
+        levelFrameRef.current = null;
+      }
+      return;
+    }
+
+    const tick = () => {
+      setInputLevel(conversation.getInputVolume());
+      levelFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    levelFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (levelFrameRef.current !== null) {
+        cancelAnimationFrame(levelFrameRef.current);
+        levelFrameRef.current = null;
+      }
+    };
+  }, [conversation.status, conversation.getInputVolume]);
+
   const isConnected = conversation.status === "connected";
 
   return (
@@ -209,6 +254,7 @@ export function SilentSOSApp() {
         isConnected={isConnected}
         isSpeaking={conversation.isSpeaking}
         isDemoMode={isDemoMode}
+        inputLevel={inputLevel}
         onStart={startCall}
         onStop={stopCall}
         onStartDemo={startDemo}
