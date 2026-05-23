@@ -1,6 +1,6 @@
 export const DEFAULT_PROFILE = {
   name: "Alex Morgan",
-  location: "Bornova, Izmir",
+  location: "",
   emergencyType: "Possible threat / unable to speak",
   medicalNotes: "None reported",
 };

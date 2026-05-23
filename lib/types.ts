@@ -28,8 +28,8 @@ export type DispatchMessage = {
 };
 
 export const DEFAULT_PROFILE: EmergencyProfile = {
-  name: "Alex Morgan",
-  location: "Bornova, Izmir",
+  name: "",
+  location: "",
   emergencyType: "Possible threat / unable to speak",
   medicalNotes: "None reported",
 };
