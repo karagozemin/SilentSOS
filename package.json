@@ -7,9 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "speech-engine": "tsx server/speech-engine.mts",
-    "create-engine": "tsx scripts/create-engine.mts",
-    "start:engine": "tsx server/speech-engine.mts"
+    "speech-engine": "node --env-file=.env.local engine/server.mjs",
+    "create-engine": "tsx scripts/create-engine.mts"
   },
   "engines": {
     "node": ">=20"

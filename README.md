@@ -46,7 +46,7 @@ npm run create-engine -- wss://YOUR-PUBLIC-URL/ws
 
 1. Connect this repo to Render
 2. Use `render.yaml` or create a Web Service:
-   - **Start command:** `npx tsx server/speech-engine.mts`
+   - **Start command:** `npm start` (from `engine/` directory)
    - **Health check:** `/health`
 3. Set env vars: `ELEVENLABS_API_KEY`, `OPENAI_API_KEY`, `SPEECH_ENGINE_ID`
 
@@ -84,7 +84,7 @@ Use **Demo Mode** in the app for a reliable scripted walkthrough when recording.
 app/                  Next.js UI + /api/token
 components/           3-panel UI, call screen, demo mode
 lib/                  Agent prompts, dispatch script, types
-server/               Speech Engine WebSocket server (Render)
+engine/               Speech Engine server (Render + local)
 scripts/              One-time engine creation
 ```
 

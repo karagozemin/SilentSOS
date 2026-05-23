@@ -7,7 +7,7 @@ Sıra önemli — önce Render, sonra Speech Engine ID, sonra Vercel.
 1. Repo’yu GitHub’a push et
 2. [render.com](https://render.com) → **New → Blueprint** (veya Web Service)
 3. `render.yaml` otomatik okunur:
-   - Start: `npx tsx server/speech-engine.mts`
+   - Start: `npm start` (root directory: `engine`)
    - Health: `/health`
 4. **İlk deploy’da sadece şunları ekle:**
 
