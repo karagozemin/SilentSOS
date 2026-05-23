@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: silentsos-engine
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npx tsx server/speech-engine.mts
+    healthCheckPath: /health
+    envVars:
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SPEECH_ENGINE_ID
+        sync: false
+      - key: NODE_VERSION
+        value: "20"

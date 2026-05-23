@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SilentSOS
 
-## Getting Started
+**When you can't speak, AI speaks for you.**
 
-First, run the development server:
+SilentSOS is a voice AI prototype for ElevenHacks #10 (Speech Engine). It helps people communicate during panic, disability, or unsafe moments by relaying critical information to a **simulated** dispatch operator.
+
+> **SIMULATION ONLY** — Not connected to real emergency services (911 / 112).
+
+## Stack
+
+- **Frontend:** Next.js + Tailwind (Vercel)
+- **Voice:** ElevenLabs Speech Engine + `@elevenlabs/react`
+- **LLM:** OpenAI GPT-4o (custom relay agent logic)
+- **Speech Engine server:** Node.js on Render
+
+## Quick start (local)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
+# Fill in ELEVENLABS_API_KEY, OPENAI_API_KEY, SPEECH_ENGINE_ID
+
+npm install
+npm run dev          # Next.js on :3000
+npm run speech-engine # Speech Engine server on :3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### First-time Speech Engine setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Deploy or expose the Speech Engine server (Render or ngrok)
+2. Create the engine resource:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run create-engine -- wss://YOUR-PUBLIC-URL/ws
+```
 
-## Learn More
+3. Copy the printed `SPEECH_ENGINE_ID` into `.env.local` and Render env vars
+4. Enable first message override (script does this automatically)
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Render (Speech Engine server)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Connect this repo to Render
+2. Use `render.yaml` or create a Web Service:
+   - **Start command:** `npx tsx server/speech-engine.mts`
+   - **Health check:** `/health`
+3. Set env vars: `ELEVENLABS_API_KEY`, `OPENAI_API_KEY`, `SPEECH_ENGINE_ID`
 
-## Deploy on Vercel
+### Vercel (Next.js)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Import repo to Vercel
+2. Set env vars:
+   - `ELEVENLABS_API_KEY`
+   - `SPEECH_ENGINE_ID`
+   - `NEXT_PUBLIC_ENGINE_URL=https://your-render-service.onrender.com`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Demo video script (~60s)
+
+1. Dark screen, trembling hand, heavy breathing (0–3s)
+2. User whispers: *"help… I can't talk"* (3–8s)
+3. AI responds calmly: *"I'm here. I'll speak for you."* (8–12s)
+4. AI relays to dispatch with location from profile (12–25s)
+5. Dispatch asks safety question (25–35s)
+6. User interrupts: *"no"* → AI relays urgency (35–42s)
+7. Split screen with **SIMULATION** watermark (42–50s)
+8. Logo + `@elevenlabsio` + `#ElevenHacks` (50–60s)
+
+Use **Demo Mode** in the app for a reliable scripted walkthrough when recording.
+
+## Hackathon submission
+
+- **Description:** Voice relay prototype using ElevenLabs Speech Engine for people who cannot speak during emergencies. Demo simulation only.
+- **Demo URL:** Vercel deployment
+- **Repo:** This repository
+- **Social:** Tag `@elevenlabsio` and `#ElevenHacks`
+
+## Project structure
+
+```
+app/                  Next.js UI + /api/token
+components/           3-panel UI, call screen, demo mode
+lib/                  Agent prompts, dispatch script, types
+server/               Speech Engine WebSocket server (Render)
+scripts/              One-time engine creation
+```
+
+## License
+
+MIT — hackathon demo project.
