@@ -14,7 +14,7 @@ export function BrandLogo({ className = "", size = 120, priority = false }: Prop
       width={size}
       height={size}
       priority={priority}
-      className={`h-auto w-auto object-contain ${className}`}
+      className={`object-contain ${className}`}
     />
   );
 }

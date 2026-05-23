@@ -48,7 +48,7 @@ export function CallScreen({
         </h1>
       </div>
 
-      <div className="relative mb-8 flex h-48 w-48 items-center justify-center">
+      <div className="relative mb-8 flex size-48 items-center justify-center">
         <div
           className={`absolute inset-0 rounded-full border-2 ${
             active ? "border-red-500/40 animate-pulse-slow" : "border-zinc-800"
@@ -60,13 +60,13 @@ export function CallScreen({
           }`}
         />
         <div
-          className={`relative flex items-center justify-center rounded-2xl p-2 ${
+          className={`relative z-10 flex size-[7.5rem] items-center justify-center overflow-hidden rounded-full ${
             active ? "shadow-[0_0_80px_rgba(220,38,38,0.25)]" : ""
           }`}
         >
           <BrandLogo
-            size={140}
-            className={`max-h-[140px] max-w-[140px] transition-transform duration-300 ${
+            size={120}
+            className={`size-full object-cover object-center transition-transform duration-300 ${
               isSpeaking ? "scale-105" : "scale-100"
             }`}
           />
