@@ -51,7 +51,6 @@ export function SilentSOSApp() {
   );
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [inputLevel, setInputLevel] = useState(0);
-  const [micMuted, setMicMuted] = useState(false);
   const demoTimeouts = useRef<number[]>([]);
   const levelFrameRef = useRef<number | null>(null);
 
@@ -87,7 +86,6 @@ export function SilentSOSApp() {
   );
 
   const conversation = useConversation({
-    micMuted,
     onConnect: () => {
       setPhase("listening");
       addEntry("system", "Voice connection established — speak now");
@@ -105,7 +103,6 @@ export function SilentSOSApp() {
       setPhase("idle");
     },
     onModeChange: ({ mode }) => {
-      setMicMuted(mode === "speaking");
       if (mode === "listening") setPhase("listening");
     },
     onInterruption: () => {
@@ -119,6 +116,8 @@ export function SilentSOSApp() {
         setPhase("user_distress");
       } else if (isAgentMessage(role, source)) {
         handleAgentText(message);
+      } else {
+        addEntry("agent", message);
       }
     },
   });

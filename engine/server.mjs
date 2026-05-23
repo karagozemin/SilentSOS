@@ -1,7 +1,6 @@
 import { createServer } from "node:http";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import OpenAI from "openai";
-import { buildAgentInstructions } from "./agent-prompt.mjs";
+import { llmConfig, requireLlmKey, streamAgentResponse } from "./llm.mjs";
 import { getActiveProfile, setActiveProfile } from "./profile-store.mjs";
 
 const SPEECH_ENGINE_ID = process.env.SPEECH_ENGINE_ID?.trim();
@@ -17,13 +16,9 @@ if (!process.env.ELEVENLABS_API_KEY) {
   console.error("[SilentSOS Engine] FATAL: ELEVENLABS_API_KEY is required");
   process.exit(1);
 }
-if (!process.env.OPENAI_API_KEY) {
-  console.error("[SilentSOS Engine] FATAL: OPENAI_API_KEY is required");
-  process.exit(1);
-}
+requireLlmKey();
 
 const elevenlabs = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function readBody(request) {
   const chunks = [];
@@ -68,7 +63,7 @@ const httpServer = createServer((request, response) => {
   const path = request.url?.split("?")[0] ?? "";
   if (path === "/health") {
     response.writeHead(200, { "Content-Type": "application/json" });
-    response.end(JSON.stringify({ ok: true, speechEngineAttached, ...(attachError ? { attachError } : {}) }));
+    response.end(JSON.stringify({ ok: true, speechEngineAttached, llmProvider: llmConfig?.provider ?? null, ...(attachError ? { attachError } : {}) }));
     return;
   }
   if (path === "/") {
@@ -90,13 +85,20 @@ if (SPEECH_ENGINE_ID) {
       debug: true,
       onInit(id) { log("Session started:", id); },
       async onTranscript(transcript, signal, session) {
-        const llmResponse = await openai.responses.create({
-          model: "gpt-4o",
-          instructions: buildAgentInstructions(getActiveProfile()),
-          input: transcript.map((m) => ({ role: m.role === "agent" ? "assistant" : m.role, content: m.content })),
-          stream: true,
-        }, { signal });
-        session.sendResponse(llmResponse);
+        try {
+          const stream = await streamAgentResponse(
+            transcript,
+            getActiveProfile(),
+            signal,
+          );
+          await session.sendResponse(stream);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error("[SilentSOS Engine] LLM error:", message);
+          await session.sendResponse(
+            "I'm still here with you. Are you in a safe place right now? Please answer yes or no.",
+          );
+        }
       },
       onClose(session) { log("Session ended:", session.conversationId); },
       onError(err) { console.error("[SilentSOS Engine] error:", err); },

@@ -1,7 +1,5 @@
 /**
- * Compatibility entrypoint for Render dashboards still using:
- *   npx tsx server/speech-engine.mts
- *
- * The real server lives in engine/server.mjs
+ * Compatibility entrypoint for Render dashboards still using tsx.
+ * Prefer: node server/speech-engine.mjs
  */
 import "../engine/server.mjs";

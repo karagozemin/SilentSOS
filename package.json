@@ -8,10 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "speech-engine": "node --env-file=.env.local engine/server.mjs",
+    "start:engine": "node server/speech-engine.mjs",
     "create-engine": "node --env-file=.env.local scripts/create-engine.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.49.1",
