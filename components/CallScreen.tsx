@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import type { ConversationPhase } from "@/lib/types";
 
 type Props = {
@@ -44,7 +45,7 @@ export function CallScreen({
         </h1>
       </div>
 
-      <div className="relative mb-8 flex h-40 w-40 items-center justify-center">
+      <div className="relative mb-8 flex h-48 w-48 items-center justify-center">
         <div
           className={`absolute inset-0 rounded-full border-2 ${
             active ? "border-red-500/40 animate-pulse-slow" : "border-zinc-800"
@@ -55,8 +56,17 @@ export function CallScreen({
             isSpeaking ? "border-red-400/60 animate-ping-slow" : "border-zinc-700"
           }`}
         />
-        <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-red-600 shadow-[0_0_60px_rgba(220,38,38,0.35)]">
-          <span className="text-2xl font-black tracking-widest text-white">SOS</span>
+        <div
+          className={`relative flex items-center justify-center rounded-2xl p-2 ${
+            active ? "shadow-[0_0_80px_rgba(220,38,38,0.25)]" : ""
+          }`}
+        >
+          <BrandLogo
+            size={140}
+            className={`max-h-[140px] max-w-[140px] transition-transform duration-300 ${
+              isSpeaking ? "scale-105" : "scale-100"
+            }`}
+          />
         </div>
       </div>
 

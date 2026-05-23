@@ -5,6 +5,16 @@ export const metadata: Metadata = {
   title: "SilentSOS — When you can't speak, AI speaks for you",
   description:
     "Voice AI emergency relay prototype powered by ElevenLabs Speech Engine. Simulation only — not connected to real emergency services.",
+  icons: {
+    icon: "/silentsos-logo.png",
+    apple: "/silentsos-logo.png",
+  },
+  openGraph: {
+    title: "SilentSOS",
+    description:
+      "When you can't speak, AI speaks for you. Voice relay prototype powered by ElevenLabs Speech Engine.",
+    images: ["/silentsos-logo.png"],
+  },
 };
 
 export default function RootLayout({
