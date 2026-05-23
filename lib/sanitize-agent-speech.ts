@@ -1,6 +1,6 @@
 /** True when relay prefix carries new critical info, not just a question */
 export function isSubstantiveRelay(text: string): boolean {
-  const match = text.match(/Relaying to dispatch:\s*(.+)/is);
+  const match = text.match(/Relaying to dispatch:\s*([\s\S]+)/i);
   if (!match) return false;
 
   const body = match[1].trim();
