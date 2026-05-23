@@ -77,8 +77,8 @@ export function SilentSOSApp() {
 
   const conversation = useConversation({
     onConnect: () => {
-      setPhase("connecting");
-      addEntry("system", "Voice connection established");
+      setPhase("listening");
+      addEntry("system", "Voice connection established — speak now");
     },
     onDisconnect: () => {
       setPhase("idle");
@@ -89,7 +89,7 @@ export function SilentSOSApp() {
       setPhase("idle");
     },
     onInterruption: () => {
-      addEntry("system", "User interrupted — listening");
+      setPhase("listening");
     },
     onMessage: ({ message, role, source }) => {
       if (!message) return;
@@ -143,8 +143,6 @@ export function SilentSOSApp() {
           },
         },
       });
-
-      addEntry("agent", FIRST_MESSAGE);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to start call";

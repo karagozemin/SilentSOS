@@ -16,6 +16,7 @@ type Props = {
 const phaseLabels: Record<ConversationPhase, string> = {
   idle: "Ready",
   connecting: "Connecting…",
+  listening: "Listening — speak or whisper",
   user_distress: "Caller distress detected",
   relaying: "Relaying to dispatch",
   safety_check: "Safety check",

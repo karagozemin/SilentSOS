@@ -1,6 +1,7 @@
 export type ConversationPhase =
   | "idle"
   | "connecting"
+  | "listening"
   | "user_distress"
   | "relaying"
   | "safety_check"
