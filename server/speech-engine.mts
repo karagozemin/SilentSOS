@@ -87,6 +87,20 @@ const httpServer = createServer((request, response) => {
     return;
   }
 
+  if (path === "/") {
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(
+      JSON.stringify({
+        service: "SilentSOS Speech Engine",
+        health: "/health",
+        profile: "/profile",
+        websocket: "/ws",
+        speechEngineAttached,
+      }),
+    );
+    return;
+  }
+
   if (path === "/profile") {
     handleProfileRoute(request, response);
     return;

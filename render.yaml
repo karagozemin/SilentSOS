@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: npm install
-    startCommand: npx tsx server/speech-engine.mts
+    startCommand: npm run start:engine
     healthCheckPath: /health
     envVars:
       - key: ELEVENLABS_API_KEY
