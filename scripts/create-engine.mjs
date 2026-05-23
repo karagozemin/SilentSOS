@@ -1,4 +1,3 @@
-import "../lib/load-env.js";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
 const wsUrl = process.argv[2];
