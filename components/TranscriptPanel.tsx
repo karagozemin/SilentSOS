@@ -35,7 +35,7 @@ export function TranscriptPanel({ entries }: Props) {
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4"
+        className="scroll-panel min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4"
       >
         {entries.length === 0 ? (
           <p className="text-sm text-zinc-600">

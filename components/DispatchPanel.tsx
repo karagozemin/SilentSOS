@@ -23,7 +23,7 @@ export function DispatchPanel({ messages }: Props) {
 
       <div
         ref={scrollRef}
-        className="max-h-48 space-y-2 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4"
+        className="scroll-panel max-h-48 space-y-2 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4"
       >
         {messages.length === 0 ? (
           <p className="font-mono text-sm text-amber-200/40">
