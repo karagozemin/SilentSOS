@@ -8,7 +8,7 @@ type Props = {
 
 export function DispatchPanel({ messages }: Props) {
   return (
-    <section className="flex flex-col rounded-xl border border-amber-500/20 bg-amber-950/10">
+    <section className="shrink-0 flex flex-col rounded-xl border border-amber-500/20 bg-amber-950/10">
       <div className="border-b border-amber-500/20 px-4 py-3">
         <p className="text-xs uppercase tracking-[0.2em] text-amber-500/80">
           Simulated Dispatch

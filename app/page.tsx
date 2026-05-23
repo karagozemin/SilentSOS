@@ -6,9 +6,9 @@ import { ClientShell } from "@/components/ClientShell";
 
 export default function Home() {
   return (
-    <>
+    <div className="flex h-dvh flex-col overflow-hidden">
       <DisclaimerBanner />
-      <header className="border-b border-zinc-900 px-4 py-3">
+      <header className="shrink-0 border-b border-zinc-900 px-4 py-3">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <BrandLogo size={52} priority className="max-h-[52px] max-w-[52px]" />
@@ -27,6 +27,6 @@ export default function Home() {
         </div>
       </header>
       <ClientShell />
-    </>
+    </div>
   );
 }

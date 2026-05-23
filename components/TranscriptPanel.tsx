@@ -1,6 +1,7 @@
 "use client";
 
 import type { TranscriptEntry } from "@/lib/types";
+import { useEffect, useRef } from "react";
 
 type Props = {
   entries: TranscriptEntry[];
@@ -21,8 +22,15 @@ const roleLabels: Record<TranscriptEntry["role"], string> = {
 };
 
 export function TranscriptPanel({ entries }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [entries]);
+
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-xl border border-zinc-800 bg-zinc-950/80">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/80">
       <div className="border-b border-zinc-800 px-4 py-3">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
           Live Transcript
@@ -30,7 +38,10 @@ export function TranscriptPanel({ entries }: Props) {
         <h2 className="text-lg font-semibold text-zinc-100">Conversation Log</h2>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-4">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4"
+      >
         {entries.length === 0 ? (
           <p className="text-sm text-zinc-600">
             Transcript will appear here once the call starts.

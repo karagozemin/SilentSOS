@@ -241,7 +241,7 @@ export function SilentSOSApp() {
   const isConnected = conversation.status === "connected";
 
   return (
-    <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-4 p-4 lg:grid-cols-[280px_1fr_320px]">
+    <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px_1fr_320px]">
       <EmergencyProfileForm
         profile={profile}
         onChange={setProfile}
@@ -259,7 +259,7 @@ export function SilentSOSApp() {
         onStartDemo={startDemo}
       />
 
-      <div className="flex min-h-0 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
         <TranscriptPanel entries={entries} />
         <DispatchPanel messages={dispatchMessages} />
       </div>
