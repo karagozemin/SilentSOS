@@ -1,13 +1,12 @@
 import type { ConversationPhase } from "./types";
 
-export type DispatchTrigger = {
+type DispatchTrigger = {
   match: RegExp;
   response: string;
   nextPhase: ConversationPhase;
 };
 
-/** Dispatch updates triggered by what the USER says */
-export const USER_DISPATCH_TRIGGERS: DispatchTrigger[] = [
+const USER_DISPATCH_TRIGGERS: DispatchTrigger[] = [
   {
     match: /can't talk|cannot speak|unable to speak|help me|help…/i,
     response: "Dispatch: Caller needs assistance — may be unable to speak.",
@@ -35,8 +34,7 @@ export const USER_DISPATCH_TRIGGERS: DispatchTrigger[] = [
   },
 ];
 
-/** Dispatch updates triggered by AGENT speech */
-export const AGENT_DISPATCH_TRIGGERS: DispatchTrigger[] = [
+const AGENT_DISPATCH_TRIGGERS: DispatchTrigger[] = [
   {
     match: /relaying to dispatch/i,
     response: "Dispatch: Copy. Received relay update.",
@@ -78,15 +76,7 @@ export function getDispatchFromAgent(agentText: string): {
   return { response: null, nextPhase: null };
 }
 
-/** @deprecated use getDispatchFromUser / getDispatchFromAgent */
-export function getDispatchResponse(agentText: string): {
-  response: string | null;
-  nextPhase: ConversationPhase | null;
-} {
-  return getDispatchFromAgent(agentText);
-}
-
-export type DemoStep = {
+type DemoStep = {
   delayMs: number;
   role: "user" | "agent" | "dispatch" | "system";
   content: string;

@@ -1,5 +1,4 @@
-/** True when relay prefix carries new critical info, not just a question */
-export function isSubstantiveRelay(text: string): boolean {
+function isSubstantiveRelay(text: string): boolean {
   const match = text.match(/Relaying to dispatch:\s*([\s\S]+)/i);
   if (!match) return false;
 
@@ -16,10 +15,7 @@ export function isSubstantiveRelay(text: string): boolean {
   return hasCriticalFact && !mostlyQuestion;
 }
 
-/**
- * Keeps "Relaying to dispatch" when appropriate.
- * Strips it only from clarifying questions that wrongly include the prefix.
- */
+/** Keeps relay prefix when substantive; strips it from mistaken clarifying questions. */
 export function normalizeAgentSpeech(text: string): string {
   const trimmed = text.replace(/\s+/g, " ").trim();
   if (!trimmed) return "I'm here with you. What's happening?";

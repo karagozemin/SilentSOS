@@ -1,5 +1,3 @@
-"use client";
-
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { ClientShell } from "@/components/ClientShell";
 
