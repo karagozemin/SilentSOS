@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
+import { Orbitron } from "next/font/google";
 import "./globals.css";
+
+const brandFont = Orbitron({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-brand",
+});
 
 export const metadata: Metadata = {
   title: "SilentSOS — When you can't speak, AI speaks for you",
   description:
     "Voice AI emergency relay prototype powered by ElevenLabs Speech Engine. Simulation only — not connected to real emergency services.",
   icons: {
-    icon: "/silentsos-logo.png",
-    apple: "/silentsos-logo.png",
+    icon: [{ url: "/silentsos-logo.png", type: "image/png" }],
+    apple: [{ url: "/silentsos-logo.png", type: "image/png" }],
   },
   openGraph: {
     title: "SilentSOS",
@@ -23,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full overflow-hidden antialiased">
+    <html lang="en" className={`${brandFont.variable} h-full overflow-hidden antialiased`}>
       <body className="flex h-full flex-col overflow-hidden bg-black font-sans text-zinc-100">
         {children}
       </body>

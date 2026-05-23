@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, monospace;
+  --font-family-brand: var(--font-brand), ui-sans-serif;
 }
 
 body {
