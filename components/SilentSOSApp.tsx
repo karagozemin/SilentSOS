@@ -5,6 +5,7 @@ import { DispatchPanel } from "@/components/DispatchPanel";
 import { EmergencyProfileForm } from "@/components/EmergencyProfile";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { FIRST_MESSAGE } from "@/lib/agent-prompt";
+import { cancelDemoSpeech, initDemoSpeech, speakDemoLine } from "@/lib/demo-speech";
 import { DEMO_SCRIPT, getDispatchFromAgent, getDispatchFromUser } from "@/lib/dispatch-script";
 import { normalizeAgentSpeech } from "@/lib/sanitize-agent-speech";
 import { syncProfileToEngine, wakeEngineServer } from "@/lib/sync-profile";
@@ -51,6 +52,7 @@ export function SilentSOSApp() {
     [],
   );
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [demoSpeaking, setDemoSpeaking] = useState(false);
   const [inputLevel, setInputLevel] = useState(0);
   const demoTimeouts = useRef<number[]>([]);
   const levelFrameRef = useRef<number | null>(null);
@@ -145,6 +147,8 @@ export function SilentSOSApp() {
 
   const resetSession = useCallback(() => {
     clearDemoTimeouts();
+    cancelDemoSpeech();
+    setDemoSpeaking(false);
     setIsDemoMode(false);
     setPhase("idle");
     setEntries([]);
@@ -208,17 +212,39 @@ export function SilentSOSApp() {
       const timeoutId = window.setTimeout(() => {
         if (step.phase) setPhase(step.phase);
         addEntry(step.role, step.content);
+
         if (step.role === "dispatch") {
           addDispatch(step.content);
         }
-        if (step.role === "agent") {
-          const { nextPhase } = getDispatchFromAgent(step.content);
+        if (step.role === "user") {
+          const { response, nextPhase } = getDispatchFromUser(step.content);
+          if (response) addDispatch(response);
           if (nextPhase) setPhase(nextPhase);
         }
+        if (step.role === "agent") {
+          const { response, nextPhase } = getDispatchFromAgent(step.content);
+          if (response) addDispatch(response);
+          if (nextPhase) setPhase(nextPhase);
+        }
+
+        speakDemoLine(
+          step.role,
+          step.content,
+          () => {
+            if (step.role === "agent" || step.role === "dispatch") {
+              setDemoSpeaking(true);
+            }
+          },
+          () => setDemoSpeaking(false),
+        );
       }, elapsed);
       demoTimeouts.current.push(timeoutId);
     }
   }, [addDispatch, addEntry, resetSession]);
+
+  useEffect(() => {
+    initDemoSpeech();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
@@ -267,7 +293,7 @@ export function SilentSOSApp() {
       <CallScreen
         phase={phase}
         isConnected={isConnected}
-        isSpeaking={conversation.isSpeaking}
+        isSpeaking={conversation.isSpeaking || demoSpeaking}
         isDemoMode={isDemoMode}
         inputLevel={inputLevel}
         onStart={startCall}
