@@ -6,44 +6,74 @@ export type DispatchTrigger = {
   nextPhase: ConversationPhase;
 };
 
-export const DISPATCH_TRIGGERS: DispatchTrigger[] = [
+/** Dispatch updates triggered by what the USER says */
+export const USER_DISPATCH_TRIGGERS: DispatchTrigger[] = [
   {
-    match: /relaying to dispatch/i,
-    response: "Dispatch: Copy. What's the nature of the emergency?",
+    match: /can't talk|cannot speak|unable to speak|help me|help…/i,
+    response: "Dispatch: Caller needs assistance — may be unable to speak.",
     nextPhase: "relaying",
   },
   {
-    match: /unable to speak|can't speak|cannot speak/i,
-    response: "Dispatch: Understood. Confirming location and caller status.",
+    match: /hiding|someone (is )?outside|break(?:ing)? in|threat|following me/i,
+    response: "Dispatch: Possible threat reported. Caller may be hiding.",
     nextPhase: "relaying",
   },
   {
-    match: /not safe|unsafe|in danger/i,
-    response: "Dispatch: Acknowledged. Marking as urgent. Stay on the line.",
+    match: /not safe|unsafe|in danger|^no$/i,
+    response: "Dispatch: Caller reports NOT safe. Marking urgent.",
     nextPhase: "dispatch_confirmed",
   },
   {
-    match: /are they safe|is (the )?user safe|safe right now/i,
-    response: "Dispatch: Are they safe right now? Need a yes or no.",
+    match: /^yes$|i'?m safe|safe now|i am safe/i,
+    response: "Dispatch: Caller confirms they are safe for now.",
     nextPhase: "safety_check",
   },
   {
-    match: /requesting immediate|dispatch help|send help/i,
-    response: "Dispatch: Help is being routed. Simulation complete.",
-    nextPhase: "dispatch_confirmed",
+    match: /bornova|izmir|location|at home|my address/i,
+    response: "Dispatch: Location update received from caller.",
+    nextPhase: "relaying",
   },
 ];
 
-export function getDispatchResponse(agentText: string): {
+/** Dispatch updates triggered by AGENT questions (not relay phrases) */
+export const AGENT_DISPATCH_TRIGGERS: DispatchTrigger[] = [
+  {
+    match: /are you safe|safe right now|say yes or no/i,
+    response: "Dispatch: Awaiting safety confirmation from caller.",
+    nextPhase: "safety_check",
+  },
+];
+
+export function getDispatchFromUser(userText: string): {
   response: string | null;
   nextPhase: ConversationPhase | null;
 } {
-  for (const trigger of DISPATCH_TRIGGERS) {
+  for (const trigger of USER_DISPATCH_TRIGGERS) {
+    if (trigger.match.test(userText)) {
+      return { response: trigger.response, nextPhase: trigger.nextPhase };
+    }
+  }
+  return { response: null, nextPhase: null };
+}
+
+export function getDispatchFromAgent(agentText: string): {
+  response: string | null;
+  nextPhase: ConversationPhase | null;
+} {
+  for (const trigger of AGENT_DISPATCH_TRIGGERS) {
     if (trigger.match.test(agentText)) {
       return { response: trigger.response, nextPhase: trigger.nextPhase };
     }
   }
   return { response: null, nextPhase: null };
+}
+
+/** @deprecated use getDispatchFromUser / getDispatchFromAgent */
+export function getDispatchResponse(agentText: string): {
+  response: string | null;
+  nextPhase: ConversationPhase | null;
+} {
+  return getDispatchFromAgent(agentText);
 }
 
 export type DemoStep = {
@@ -78,15 +108,20 @@ export const DEMO_SCRIPT: DemoStep[] = [
   },
   {
     delayMs: 5500,
-    role: "agent",
-    content:
-      "Relaying to dispatch: Caller unable to speak clearly. Location Bornova, Izmir. Possible threat — caller is hiding.",
+    role: "dispatch",
+    content: "Dispatch: Possible threat reported. Caller may be hiding.",
     phase: "relaying",
   },
   {
-    delayMs: 7000,
+    delayMs: 6500,
+    role: "agent",
+    content: "I hear you. Are you in a safe place right now?",
+    phase: "relaying",
+  },
+  {
+    delayMs: 8000,
     role: "dispatch",
-    content: "Dispatch: Copy. Are they safe right now?",
+    content: "Dispatch: Awaiting safety confirmation from caller.",
     phase: "safety_check",
   },
   {
@@ -101,9 +136,14 @@ export const DEMO_SCRIPT: DemoStep[] = [
   },
   {
     delayMs: 12500,
+    role: "dispatch",
+    content: "Dispatch: Caller reports NOT safe. Marking urgent.",
+    phase: "dispatch_confirmed",
+  },
+  {
+    delayMs: 13500,
     role: "agent",
-    content:
-      "Relaying to dispatch: User is NOT safe. Requesting immediate assistance.",
+    content: "Stay quiet. I'm with you. Help is being routed.",
     phase: "dispatch_confirmed",
   },
   {

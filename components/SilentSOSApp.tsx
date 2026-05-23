@@ -5,7 +5,8 @@ import { DispatchPanel } from "@/components/DispatchPanel";
 import { EmergencyProfileForm } from "@/components/EmergencyProfile";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { FIRST_MESSAGE } from "@/lib/agent-prompt";
-import { DEMO_SCRIPT, getDispatchResponse } from "@/lib/dispatch-script";
+import { DEMO_SCRIPT, getDispatchFromAgent, getDispatchFromUser } from "@/lib/dispatch-script";
+import { sanitizeAgentSpeech } from "@/lib/sanitize-agent-speech";
 import { syncProfileToEngine, wakeEngineServer } from "@/lib/sync-profile";
 import type {
   ConversationPhase,
@@ -73,8 +74,24 @@ export function SilentSOSApp() {
 
   const handleAgentText = useCallback(
     (text: string) => {
-      addEntry("agent", text);
-      const { response, nextPhase } = getDispatchResponse(text);
+      const cleaned = sanitizeAgentSpeech(text);
+      addEntry("agent", cleaned);
+      const { response, nextPhase } = getDispatchFromAgent(cleaned);
+      if (response) {
+        addDispatch(response);
+      }
+      if (nextPhase) {
+        setPhase(nextPhase);
+      }
+    },
+    [addDispatch, addEntry],
+  );
+
+  const handleUserText = useCallback(
+    (text: string) => {
+      addEntry("user", text);
+      setPhase("user_distress");
+      const { response, nextPhase } = getDispatchFromUser(text);
       if (response) {
         addDispatch(response);
       }
@@ -112,12 +129,11 @@ export function SilentSOSApp() {
       if (!message) return;
 
       if (isUserMessage(role, source)) {
-        addEntry("user", message);
-        setPhase("user_distress");
+        handleUserText(message);
       } else if (isAgentMessage(role, source)) {
         handleAgentText(message);
       } else {
-        addEntry("agent", message);
+        addEntry("agent", sanitizeAgentSpeech(message));
       }
     },
   });
@@ -196,7 +212,7 @@ export function SilentSOSApp() {
           addDispatch(step.content);
         }
         if (step.role === "agent") {
-          const { nextPhase } = getDispatchResponse(step.content);
+          const { nextPhase } = getDispatchFromAgent(step.content);
           if (nextPhase) setPhase(nextPhase);
         }
       }, elapsed);

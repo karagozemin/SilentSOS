@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { buildAgentInstructions } from "./agent-prompt.mjs";
+import { sanitizeAgentSpeech } from "./sanitize-speech.mjs";
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -52,19 +53,22 @@ export function requireLlmKey() {
   );
 }
 
-export async function streamAgentResponse(transcript, profile, signal) {
+export async function generateAgentResponse(transcript, profile, signal) {
   if (!llmConfig) {
     throw new Error("No LLM configured");
   }
 
-  return llmConfig.client.chat.completions.create(
+  const completion = await llmConfig.client.chat.completions.create(
     {
       model: llmConfig.model,
       messages: transcriptToMessages(transcript, profile),
-      stream: true,
-      temperature: 0.6,
-      max_tokens: 256,
+      stream: false,
+      temperature: 0.4,
+      max_tokens: 180,
     },
     { signal },
   );
+
+  const raw = completion.choices[0]?.message?.content ?? "";
+  return sanitizeAgentSpeech(raw);
 }

@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import { llmConfig, requireLlmKey, streamAgentResponse } from "./llm.mjs";
+import { llmConfig, requireLlmKey, generateAgentResponse } from "./llm.mjs";
 import { getActiveProfile, setActiveProfile } from "./profile-store.mjs";
 
 const SPEECH_ENGINE_ID = process.env.SPEECH_ENGINE_ID?.trim();
@@ -86,12 +86,12 @@ if (SPEECH_ENGINE_ID) {
       onInit(id) { log("Session started:", id); },
       async onTranscript(transcript, signal, session) {
         try {
-          const stream = await streamAgentResponse(
+          const text = await generateAgentResponse(
             transcript,
             getActiveProfile(),
             signal,
           );
-          await session.sendResponse(stream);
+          await session.sendResponse(text);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           console.error("[SilentSOS Engine] LLM error:", message);
