@@ -6,7 +6,7 @@ import { EmergencyProfileForm } from "@/components/EmergencyProfile";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { FIRST_MESSAGE } from "@/lib/agent-prompt";
 import { DEMO_SCRIPT, getDispatchFromAgent, getDispatchFromUser } from "@/lib/dispatch-script";
-import { sanitizeAgentSpeech } from "@/lib/sanitize-agent-speech";
+import { normalizeAgentSpeech } from "@/lib/sanitize-agent-speech";
 import { syncProfileToEngine, wakeEngineServer } from "@/lib/sync-profile";
 import type {
   ConversationPhase,
@@ -74,7 +74,7 @@ export function SilentSOSApp() {
 
   const handleAgentText = useCallback(
     (text: string) => {
-      const cleaned = sanitizeAgentSpeech(text);
+      const cleaned = normalizeAgentSpeech(text);
       addEntry("agent", cleaned);
       const { response, nextPhase } = getDispatchFromAgent(cleaned);
       if (response) {
@@ -133,7 +133,7 @@ export function SilentSOSApp() {
       } else if (isAgentMessage(role, source)) {
         handleAgentText(message);
       } else {
-        addEntry("agent", sanitizeAgentSpeech(message));
+        addEntry("agent", normalizeAgentSpeech(message));
       }
     },
   });

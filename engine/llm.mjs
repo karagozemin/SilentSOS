@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { buildAgentInstructions } from "./agent-prompt.mjs";
-import { sanitizeAgentSpeech } from "./sanitize-speech.mjs";
+import { normalizeAgentSpeech } from "./sanitize-speech.mjs";
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -70,5 +70,5 @@ export async function generateAgentResponse(transcript, profile, signal) {
   );
 
   const raw = completion.choices[0]?.message?.content ?? "";
-  return sanitizeAgentSpeech(raw);
+  return normalizeAgentSpeech(raw);
 }
