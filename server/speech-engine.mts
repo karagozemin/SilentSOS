@@ -6,8 +6,11 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import OpenAI from "openai";
 
-const SPEECH_ENGINE_ID = process.env.SPEECH_ENGINE_ID;
+const SPEECH_ENGINE_ID = process.env.SPEECH_ENGINE_ID?.trim();
 const PORT = Number(process.env.PORT ?? 3001);
+
+let speechEngineAttached = false;
+let attachError: string | null = null;
 
 if (!process.env.ELEVENLABS_API_KEY || !process.env.OPENAI_API_KEY) {
   throw new Error("ELEVENLABS_API_KEY and OPENAI_API_KEY are required");
@@ -70,65 +73,79 @@ function handleProfileRoute(
 }
 
 const httpServer = createServer((request, response) => {
-  if (request.url === "/profile" || request.url === "/health") {
-    if (request.url === "/health") {
-      response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(
-        JSON.stringify({
-          ok: true,
-          speechEngineAttached: Boolean(SPEECH_ENGINE_ID),
-        }),
-      );
-      return;
-    }
+  const path = request.url?.split("?")[0] ?? "";
+
+  if (path === "/health") {
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(
+      JSON.stringify({
+        ok: true,
+        speechEngineAttached,
+        ...(attachError ? { attachError } : {}),
+      }),
+    );
+    return;
+  }
+
+  if (path === "/profile") {
     handleProfileRoute(request, response);
     return;
   }
+
+  response.writeHead(404, { "Content-Type": "application/json" });
+  response.end(JSON.stringify({ error: "Not found" }));
 });
 
 if (SPEECH_ENGINE_ID) {
-  await elevenlabs.speechEngine.attach(SPEECH_ENGINE_ID, httpServer, "/ws", {
-    debug: true,
+  try {
+    elevenlabs.speechEngine.attach(SPEECH_ENGINE_ID, httpServer, "/ws", {
+      debug: true,
 
-    onInit(conversationId) {
-      console.log("Session started:", conversationId);
-    },
+      onInit(conversationId) {
+        console.log("Session started:", conversationId);
+      },
 
-    async onTranscript(transcript, signal, session) {
-      const profile = getActiveProfile();
-      const instructions = buildAgentInstructions(profile);
+      async onTranscript(transcript, signal, session) {
+        const profile = getActiveProfile();
+        const instructions = buildAgentInstructions(profile);
 
-      const response = await openai.responses.create(
-        {
-          model: "gpt-4o",
-          instructions,
-          input: transcript.map((message) => ({
-            role: message.role === "agent" ? "assistant" : message.role,
-            content: message.content,
-          })),
-          stream: true,
-        },
-        { signal },
-      );
+        const response = await openai.responses.create(
+          {
+            model: "gpt-4o",
+            instructions,
+            input: transcript.map((message) => ({
+              role: message.role === "agent" ? "assistant" : message.role,
+              content: message.content,
+            })),
+            stream: true,
+          },
+          { signal },
+        );
 
-      session.sendResponse(response);
-    },
+        session.sendResponse(response);
+      },
 
-    onClose(session) {
-      console.log("Session ended:", session.conversationId);
-    },
+      onClose(session) {
+        console.log("Session ended:", session.conversationId);
+      },
 
-    onError(err) {
-      console.error("Speech Engine error:", err);
-    },
-  });
-  console.log("Speech Engine attached:", SPEECH_ENGINE_ID);
+      onError(err) {
+        console.error("Speech Engine error:", err);
+      },
+    });
+    speechEngineAttached = true;
+    console.log("Speech Engine attached:", SPEECH_ENGINE_ID);
+  } catch (error) {
+    attachError =
+      error instanceof Error ? error.message : "Unknown attach error";
+    console.error("Failed to attach Speech Engine:", attachError);
+  }
 } else {
   console.warn(
-    "SPEECH_ENGINE_ID missing — server is up for /health and /profile only. Add ID after running create-engine.",
+    "SPEECH_ENGINE_ID missing — server is up for /health and /profile only.",
   );
 }
 
-httpServer.listen(PORT, () => {
-  console.log(`Speech Engine server listening on port ${PORT}`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`Speech Engine server listening on 0.0.0.0:${PORT}`);
 });
