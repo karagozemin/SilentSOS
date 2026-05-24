@@ -32,7 +32,7 @@ In a real emergency, people often **cannot speak clearly** — panic, whispering
 
 The user stays calm. The AI asks short questions. When critical facts emerge, the agent relays them: *"Relaying to dispatch: Caller is hiding, location confirmed, not safe."*
 
-> **SIMULATION ONLY** — Not connected to real 911 / 112 services. Built for ElevenHacks #10 demo and education.
+> **SIMULATION ONLY** — Not connected to real emergency services. Built for ElevenHacks #10 demo and education.
 
 ---
 
