@@ -172,7 +172,10 @@ export function SilentSOSApp() {
 
       const tokenRes = await fetch("/api/token", { method: "POST" });
       if (!tokenRes.ok) {
-        throw new Error("Failed to get conversation token");
+        const body = (await tokenRes.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(body?.error ?? "Failed to get conversation token");
       }
       const { token } = (await tokenRes.json()) as { token: string };
 
