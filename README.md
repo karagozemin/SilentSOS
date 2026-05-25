@@ -40,7 +40,7 @@ The user stays calm. The AI asks short questions. When critical facts emerge, th
 
 | Capability | How SilentSOS uses it |
 |---|---|
-| **Custom Speech Engine server** | Own WebSocket server on Render runs the full agent brain via `onTranscript` |
+| **Custom Speech Engine server** | Own WebSocket server on DigitalOcean runs the full agent brain via `onTranscript` |
 | **Bring-your-own LLM** | Groq (`llama-3.3-70b`) streams responses back through `session.sendResponse()` |
 | **Real-time voice** | WebRTC via `@elevenlabs/react` — live STT, TTS, interruption handling |
 | **Profile injection** | Emergency profile synced to the engine before each call |
@@ -55,7 +55,7 @@ This is not a wrapper around a default agent — it is a **purpose-built emergen
 | | URL |
 |---|---|
 | **Web app** | Deploy on Vercel → your `*.vercel.app` |
-| **Speech Engine** | Render → `/health` returns `{ ok, speechEngineAttached, llmProvider }` |
+| **Speech Engine** | DigitalOcean → `/health` returns `{ ok, speechEngineAttached, llmProvider }` |
 
 **Try it:**
 1. Fill in the **Emergency Profile** (name, location, threat type)
@@ -72,14 +72,14 @@ This is not a wrapper around a default agent — it is a **purpose-built emergen
 - **Dispatch simulation** — operator channel reacts to user speech and agent relays
 - **Conversation phases** — connecting → listening → distress → relay → safety check
 - **Server-side secrets** — ElevenLabs key never exposed to the browser
-- **Cold-start aware** — wakes Render free tier before opening a voice session
+- **Pre-call health check** — verifies Speech Engine is attached before opening a voice session
 
 ---
 
 ## Architecture
 
 ```
-Browser (Vercel)          ElevenLabs Cloud           Render (Speech Engine)
+Browser (Vercel)          ElevenLabs Cloud           DigitalOcean (Speech Engine)
      │                          │                            │
      │  WebRTC voice            │  transcript + TTS          │
      ├─────────────────────────►│◄──────────────────────────►│
@@ -104,41 +104,45 @@ Fill `.env.local`:
 | Variable | Where |
 |---|---|
 | `ELEVENLABS_API_KEY` | [ElevenLabs](https://elevenlabs.io) |
-| `GROQ_API_KEY` | [Groq Console](https://console.groq.com) (Render engine) |
+| `GROQ_API_KEY` | [Groq Console](https://console.groq.com) (Speech Engine server) |
 | `SPEECH_ENGINE_ID` | After `create-engine` (below) |
-| `NEXT_PUBLIC_ENGINE_URL` | Your Render URL |
-| `ENGINE_URL` | Same Render URL |
+| `NEXT_PUBLIC_ENGINE_URL` | Your DigitalOcean App URL |
+| `ENGINE_URL` | Same DigitalOcean App URL |
 
 ```bash
 npm install
 npm run dev    # http://localhost:3000
 ```
 
-Voice calls use the **Render backend** even locally — only `npm run dev` is required for the frontend.
+Voice calls use the **DigitalOcean backend** even locally — only `npm run dev` is required for the frontend.
 
 ### Create Speech Engine (once)
 
 ```bash
-npm run create-engine -- wss://YOUR-SERVICE.onrender.com/ws
+npm run create-engine -- wss://YOUR-APP.ondigitalocean.app/ws
 ```
 
-Copy `SPEECH_ENGINE_ID=seng_…` into `.env.local`, Render, and Vercel.
+Copy `SPEECH_ENGINE_ID=seng_…` into `.env.local`, DigitalOcean, and Vercel.
 
 ---
 
 ## Deploy
 
-### Render — Speech Engine server
+### DigitalOcean — Speech Engine server
 
-Use `render.yaml` or:
+Use `.do/app.yaml` or App Platform manual setup:
 
 | Setting | Value |
 |---|---|
 | Root directory | `engine` |
+| Build command | `npm install` |
 | Start command | `npm start` |
 | Health check | `/health` |
+| HTTP port | `8080` |
 
 Env: `ELEVENLABS_API_KEY`, `GROQ_API_KEY`, `SPEECH_ENGINE_ID`
+
+Live backend: `https://silentsos-engine-5s9ed.ondigitalocean.app`
 
 ### Vercel — Next.js frontend
 
@@ -182,16 +186,17 @@ Use **Demo Mode** for a reliable recording take.
 ```
 app/
   api/token/           WebRTC token (server-side ElevenLabs key)
-  api/profile/         Profile proxy → Render
-  api/engine-health/   Wake + verify Render before calls
+  api/profile/         Profile proxy → Speech Engine server
+  api/engine-health/   Verify engine health before calls
 components/            3-panel UI, call screen, demo mode
 lib/                   Dispatch triggers, sanitize, types, sync
-engine/                Speech Engine server (Render production)
+engine/                Speech Engine server (DigitalOcean production)
   server.mjs           HTTP + WebSocket attach
   llm.mjs              Groq chat completions
   agent-prompt.mjs     Dual-mode relay instructions
 scripts/               create-engine.mjs
-server/                Legacy Render entry shims
+server/                Legacy entry shims
+.do/                   DigitalOcean App Platform spec
 ```
 
 ---

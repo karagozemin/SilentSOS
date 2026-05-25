@@ -1,0 +1,26 @@
+name: silentsos-engine
+region: fra
+services:
+  - name: silentsos-engine
+    github:
+      repo: karagozemin/SilentSOS
+      branch: main
+      deploy_on_push: true
+    source_dir: /engine
+    build_command: npm install
+    run_command: npm start
+    http_port: 8080
+    health_check:
+      http_path: /health
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: ELEVENLABS_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: GROQ_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: SPEECH_ENGINE_ID
+        scope: RUN_TIME
+        type: SECRET

@@ -4,7 +4,7 @@ const wsUrl = process.argv[2];
 
 if (!wsUrl) {
   console.error(
-    "Usage: npm run create-engine -- wss://YOUR-SERVICE.onrender.com/ws",
+    "Usage: npm run create-engine -- wss://YOUR-APP.ondigitalocean.app/ws",
   );
   process.exit(1);
 }
@@ -26,7 +26,7 @@ const engine = await elevenlabs.speechEngine.create({
 });
 
 console.log("\nSpeech Engine created successfully.\n");
-console.log("Add this to Render + Vercel env vars:\n");
+console.log("Add this to DigitalOcean + Vercel env vars:\n");
 console.log(`SPEECH_ENGINE_ID=${engine.engineId}\n`);
 
 await elevenlabs.speechEngine.update(engine.engineId, {

@@ -11,7 +11,7 @@ SilentSOS splits into two deployable units:
 | Unit | Platform | Role |
 |---|---|---|
 | **Frontend + API gateway** | Vercel (Next.js 16) | UI, WebRTC client, secret proxy |
-| **Speech Engine server** | Render (Node 20) | WebSocket LLM backend for ElevenLabs |
+| **Speech Engine server** | DigitalOcean App Platform (Node 20) | WebSocket LLM backend for ElevenLabs |
 
 ```mermaid
 flowchart TB
@@ -33,7 +33,7 @@ flowchart TB
     SE[Speech Engine Router]
   end
 
-  subgraph Render
+  subgraph DigitalOcean
     WS["/ws WebSocket"]
     LLM[Groq llama-3.3-70b]
     Store[(Profile Store)]
@@ -47,7 +47,7 @@ flowchart TB
 
   Token --> ElevenLabs
   Profile --> Store
-  Health --> Render
+  Health --> DigitalOcean
 
   SE <-->|JWT-verified WS| WS
   WS --> LLM
@@ -63,8 +63,8 @@ flowchart TB
 ### 2.1 Start call
 
 1. User clicks **Start Emergency Call**
-2. Client calls `GET /api/engine-health` → pings Render `/health` (cold-start wake)
-3. Client calls `POST /api/profile` → syncs emergency profile to Render
+2. Client calls `GET /api/engine-health` → pings DigitalOcean `/health`
+3. Client calls `POST /api/profile` → syncs emergency profile to Speech Engine server
 4. Client calls `POST /api/token` → server returns WebRTC conversation token
 5. `useConversation().startSession({ conversationToken, overrides })` opens WebRTC
 6. Agent speaks first message: *"I'm here. I'll speak for you…"*
@@ -73,7 +73,7 @@ flowchart TB
 
 ```
 User audio → ElevenLabs STT → transcript batch
-    → Render /ws (onTranscript)
+    → DigitalOcean /ws (onTranscript)
     → Groq (system prompt + profile + history)
     → normalizeAgentSpeech()
     → session.sendResponse(text)
@@ -99,13 +99,13 @@ ElevenLabs handles barge-in natively. A new `user_transcript` aborts the in-flig
 
 ## 3. Speech Engine server (`engine/`)
 
-Minimal Node.js service — **no Next.js, no TypeScript runtime on Render**.
+Minimal Node.js service — **no Next.js, no TypeScript runtime on App Platform**.
 
 ### 3.1 Entry
 
 ```
 engine/server.mjs       ← production (npm start)
-server/speech-engine.mjs ← legacy Render shim
+server/speech-engine.mjs ← legacy entry shim
 ```
 
 ### 3.2 HTTP routes
@@ -215,9 +215,9 @@ Drives the call screen status label and demo script timing.
 
 | Secret | Stored on | Never in browser |
 |---|---|---|
-| `ELEVENLABS_API_KEY` | Vercel + Render | ✅ proxied via `/api/token` |
-| `GROQ_API_KEY` | Render only | ✅ |
-| `SPEECH_ENGINE_ID` | Vercel + Render | ✅ server-side token minting |
+| `ELEVENLABS_API_KEY` | Vercel + DigitalOcean | ✅ proxied via `/api/token` |
+| `GROQ_API_KEY` | DigitalOcean only | ✅ |
+| `SPEECH_ENGINE_ID` | Vercel + DigitalOcean | ✅ server-side token minting |
 
 WebSocket `/ws` rejects connections without valid ElevenLabs JWT (HMAC of API key hash).
 
@@ -225,7 +225,7 @@ WebSocket `/ws` rejects connections without valid ElevenLabs JWT (HMAC of API ke
 
 ## 7. Environment matrix
 
-| Variable | Vercel | Render | `.env.local` |
+| Variable | Vercel | DigitalOcean | `.env.local` |
 |---|---|---|---|
 | `ELEVENLABS_API_KEY` | ✅ | ✅ | ✅ |
 | `GROQ_API_KEY` | ❌ | ✅ | ✅ |
@@ -240,7 +240,7 @@ WebSocket `/ws` rejects connections without valid ElevenLabs JWT (HMAC of API ke
 
 | | Demo Mode | Live Call |
 |---|---|---|
-| API keys | Not required | ElevenLabs + Render + Groq |
+| API keys | Not required | ElevenLabs + DigitalOcean + Groq |
 | Voice | Scripted timeouts | Real WebRTC |
 | Dispatch | Pre-written script | Trigger-based from speech |
 | Use case | Video recording, UI test | Full Speech Engine demo |
@@ -261,7 +261,7 @@ WebSocket `/ws` rejects connections without valid ElevenLabs JWT (HMAC of API ke
 
 | Failure | Behavior |
 |---|---|
-| Render cold start | `/api/engine-health` wake before call |
+| Engine unreachable / not attached | `/api/engine-health` blocks call start |
 | Groq quota / error | Fallback spoken message; session stays open |
 | WebRTC drop | `onDisconnect` → system message in transcript |
 | Missing env | `/api/token` returns 500 with clear error |
@@ -272,7 +272,7 @@ WebSocket `/ws` rejects connections without valid ElevenLabs JWT (HMAC of API ke
 
 - Push-to-talk for absolute silence scenarios
 - Multilingual relay (STT already multi-locale via ElevenLabs)
-- Persistent profile storage (Postgres on Render)
+- Persistent profile storage (Postgres on DigitalOcean)
 - Real dispatch API adapter layer (behind explicit opt-in + legal gate)
 - Streaming LLM back through `sendResponse(stream)` for lower time-to-first-token
 
@@ -291,8 +291,8 @@ engine/
 
 app/api/
   token/route.ts       getWebrtcToken(agentId: SPEECH_ENGINE_ID)
-  profile/route.ts     Proxy POST → Render /profile
-  engine-health/route.ts  Proxy GET → Render /health
+  profile/route.ts     Proxy POST → Speech Engine /profile
+  engine-health/route.ts  Proxy GET → Speech Engine /health
 
 components/
   SilentSOSApp.tsx     Voice hook + state orchestration

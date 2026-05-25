@@ -44,7 +44,7 @@ export const llmConfig = createLlmConfig();
 export function requireLlmKey() {
   if (!llmConfig) {
     console.error("[SilentSOS Engine] FATAL: No LLM configured.");
-    console.error("[SilentSOS Engine] Add GROQ_API_KEY on Render → Settings → Environment");
+    console.error("[SilentSOS Engine] Add GROQ_API_KEY in App Platform → Settings → Environment");
     console.error("[SilentSOS Engine] Get a free key: https://console.groq.com/keys");
     process.exit(1);
   }

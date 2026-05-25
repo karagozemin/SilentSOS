@@ -166,7 +166,7 @@ export function SilentSOSApp() {
     setPhase("connecting");
 
     try {
-      addEntry("system", "Waking Speech Engine server…");
+      addEntry("system", "Checking Speech Engine server…");
       await wakeEngineServer();
       await syncProfile(profile);
 
