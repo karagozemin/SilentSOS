@@ -9,14 +9,13 @@
 </p>
 
 <p align="center">
-  <a href="https://elevenlabs.io">ElevenHacks #10</a> ·
-  <a href="https://elevenlabs.io/docs/agents-platform/customization/speech-engine">ElevenLabs Speech Engine</a> ·
+  <a href="https://docs.d-id.com/docs/elevenlabs-agent-overview">D-ID + ElevenAgents</a> ·
   Voice AI Emergency Relay
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Simulation%20Only-amber?style=flat-square" alt="Simulation only" />
-  <img src="https://img.shields.io/badge/Stack-Next.js%20%7C%20Speech%20Engine%20%7C%20Groq-red?style=flat-square" alt="Stack" />
+  <img src="https://img.shields.io/badge/Stack-Next.js%20%7C%20D--ID%20%7C%20ElevenAgents-red?style=flat-square" alt="Stack" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT" />
 </p>
 
@@ -28,66 +27,22 @@ In a real emergency, people often **cannot speak clearly** — panic, whispering
 
 ## The solution
 
-**SilentSOS** is a voice AI relay that listens to distressed or whispered speech and **speaks on the user's behalf** to a simulated dispatch operator — powered by the **ElevenLabs Speech Engine** with a custom LLM backend.
+**SilentSOS** listens to distressed or whispered speech and **speaks on the user's behalf** to a simulated dispatch operator — with a **D-ID expressive avatar** and **ElevenAgents** conversational AI.
 
-The user stays calm. The AI asks short questions. When critical facts emerge, the agent relays them: *"Relaying to dispatch: Caller is hiding, location confirmed, not safe."*
+The user sees a calm face. The AI asks short questions. When critical facts emerge, the avatar relays them: *"Relaying to dispatch: Caller is hiding, location confirmed, not safe."*
 
-> **SIMULATION ONLY** — Not connected to real emergency services. Built for ElevenHacks #10 demo and education.
-
----
-
-## Why this wins on Speech Engine
-
-| Capability | How SilentSOS uses it |
-|---|---|
-| **Custom Speech Engine server** | Own WebSocket server on DigitalOcean runs the full agent brain via `onTranscript` |
-| **Bring-your-own LLM** | Groq (`llama-3.3-70b`) streams responses back through `session.sendResponse()` |
-| **Real-time voice** | WebRTC via `@elevenlabs/react` — live STT, TTS, interruption handling |
-| **Profile injection** | Emergency profile synced to the engine before each call |
-| **Dual-mode agent** | Mode A: talk to user · Mode B: relay critical facts to dispatch |
-
-This is not a wrapper around a default agent — it is a **purpose-built emergency relay pipeline** on Speech Engine primitives.
-
----
-
-## Live demo
-
-| | URL |
-|---|---|
-| **Web app** | Deploy on Vercel → your `*.vercel.app` |
-| **Speech Engine** | DigitalOcean → `/health` returns `{ ok, speechEngineAttached, llmProvider }` |
-
-**Try it:**
-1. Fill in the **Emergency Profile** (name, location, threat type)
-2. **Start Emergency Call** — speak or whisper
-3. Or **Run Demo Mode** for a scripted 60s walkthrough (no API keys needed for UI)
+> **SIMULATION ONLY** — Not connected to real emergency services.
 
 ---
 
 ## Features
 
-- **Three-panel command center** — profile · live call · transcript + dispatch
-- **Whisper-friendly** — built for low-volume, panicked speech
-- **Smart relay logic** — agent only says *"Relaying to dispatch"* when facts are critical
-- **Dispatch simulation** — operator channel reacts to user speech and agent relays
-- **Conversation phases** — connecting → listening → distress → relay → safety check
-- **Server-side secrets** — ElevenLabs key never exposed to the browser
-- **Pre-call health check** — verifies Speech Engine is attached before opening a voice session
-
----
-
-## Architecture
-
-```
-Browser (Vercel)          ElevenLabs Cloud           DigitalOcean (Speech Engine)
-     │                          │                            │
-     │  WebRTC voice            │  transcript + TTS          │
-     ├─────────────────────────►│◄──────────────────────────►│
-     │  /api/token              │       wss://…/ws             │  Groq LLM
-     │  /api/profile ───────────────────────────────────────►│
-```
-
-Full technical breakdown → **[ARCHITECTURE.md](./ARCHITECTURE.md)**
+- **D-ID avatar relay** — expressive face lip-syncs dispatch messages in real time
+- **ElevenAgents brain** — STT, LLM, and TTS via D-ID's native ElevenLabs integration
+- **Optional vision** — webcam lets the agent react to visible distress
+- **Three-panel UI** — profile · live avatar · transcript + dispatch
+- **Dual-mode agent** — calm user dialogue vs. dispatch relay messages
+- **Demo mode** — scripted walkthrough with lip-synced avatar lines
 
 ---
 
@@ -99,118 +54,56 @@ cd SilentSOS
 cp .env.example .env.local
 ```
 
-Fill `.env.local`:
-
-| Variable | Where |
-|---|---|
-| `ELEVENLABS_API_KEY` | [ElevenLabs](https://elevenlabs.io) |
-| `GROQ_API_KEY` | [Groq Console](https://console.groq.com) (Speech Engine server) |
-| `SPEECH_ENGINE_ID` | After `create-engine` (below) |
-| `NEXT_PUBLIC_ENGINE_URL` | Your DigitalOcean App URL |
-| `ENGINE_URL` | Same DigitalOcean App URL |
+Fill `.env.local` with `ELEVENLABS_API_KEY` and `DID_API_KEY`, then:
 
 ```bash
+npm run create-elevenlabs-agent   # → ELEVENLABS_AGENT_ID
+npm run create-did-agent          # → DID_AGENT_ID, DID_CLIENT_KEY
 npm install
-npm run dev    # http://localhost:3000
+npm run dev                       # http://localhost:3000
 ```
 
-Voice calls use the **DigitalOcean backend** even locally — only `npm run dev` is required for the frontend.
+Architecture details → **[ARCHITECTURE.md](./ARCHITECTURE.md)**
 
-### Create Speech Engine (once)
+---
+
+## Deploy (Vercel)
+
+Required env vars:
+
+| Variable |
+|---|
+| `ELEVENLABS_API_KEY` |
+| `ELEVENLABS_AGENT_ID` |
+| `DID_AGENT_ID` |
+| `DID_CLIENT_KEY` |
+
+Whitelist your production domain when creating the D-ID agent:
 
 ```bash
-npm run create-engine -- wss://YOUR-APP.ondigitalocean.app/ws
+DID_ALLOWED_DOMAINS=http://localhost:3000,https://your-app.vercel.app npm run create-did-agent
 ```
-
-Copy `SPEECH_ENGINE_ID=seng_…` into `.env.local`, DigitalOcean, and Vercel.
-
----
-
-## Deploy
-
-### DigitalOcean — Speech Engine server
-
-Use `.do/app.yaml` or App Platform manual setup:
-
-| Setting | Value |
-|---|---|
-| Root directory | `engine` |
-| Build command | `npm install` |
-| Start command | `npm start` |
-| Health check | `/health` |
-| HTTP port | `8080` |
-
-Env: `ELEVENLABS_API_KEY`, `GROQ_API_KEY`, `SPEECH_ENGINE_ID`
-
-Live backend: `https://silentsos-engine-5s9ed.ondigitalocean.app`
-
-### Vercel — Next.js frontend
-
-Env: `ELEVENLABS_API_KEY`, `SPEECH_ENGINE_ID`, `NEXT_PUBLIC_ENGINE_URL`, `ENGINE_URL`
-
----
-
-## Demo video script (~60s)
-
-1. **0–3s** — Dark screen, trembling hand, heavy breathing  
-2. **3–8s** — Whisper: *"help… I can't talk"*  
-3. **8–12s** — AI: *"I'm here. I'll speak for you."*  
-4. **12–25s** — Relay to dispatch with profile location  
-5. **25–35s** — Dispatch safety question  
-6. **35–42s** — User interrupts: *"no"* → urgent relay  
-7. **42–50s** — **SIMULATION ONLY** banner visible  
-8. **50–60s** — Logo + `@elevenlabsio` + `#ElevenHacks`
-
-Use **Demo Mode** for a reliable recording take.
-
----
-
-## Hackathon submission
-
-| Field | Value |
-|---|---|
-| **Track** | ElevenHacks #10 — Speech Engine |
-| **One-liner** | Voice AI relay for people who cannot speak during emergencies |
-| **Demo URL** | Vercel deployment |
-| **Repo** | This repository |
-| **Social** | `@elevenlabsio` · `#ElevenHacks` |
-
-**Suggested post:**
-
-> Built SilentSOS for #ElevenHacks — when panic takes your voice, AI speaks for you. Custom Speech Engine server + Groq relay agent. Simulation only. @elevenlabsio
 
 ---
 
 ## Project structure
 
 ```
-app/
-  api/token/           WebRTC token (server-side ElevenLabs key)
-  api/profile/         Profile proxy → Speech Engine server
-  api/engine-health/   Verify engine health before calls
-components/            3-panel UI, call screen, demo mode
-lib/                   Dispatch triggers, sanitize, types, sync
-engine/                Speech Engine server (DigitalOcean production)
-  server.mjs           HTTP + WebSocket attach
-  llm.mjs              Groq chat completions
-  agent-prompt.mjs     Dual-mode relay instructions
-scripts/               create-engine.mjs
-server/                Legacy entry shims
-.do/                   DigitalOcean App Platform spec
+app/api/agent-config/     D-ID credentials for browser
+app/api/agent-profile/    Profile → ElevenAgents prompt
+components/               UI + avatar call screen
+lib/                      D-ID hook, prompts, dispatch logic
+scripts/                  Agent setup scripts
 ```
 
 ---
 
 ## Safety & ethics
 
-SilentSOS is a **prototype for demonstration**. It does not contact real emergency services. Any production use would require legal review, carrier integration, location verification, and human-in-the-loop dispatch protocols.
+SilentSOS is a **prototype for demonstration**. It does not contact real emergency services.
 
 ---
 
 ## License
 
-MIT — hackathon demo project.
-
-<p align="center">
-  Built with ❤️ for <strong>ElevenHacks #10</strong> · Speech Engine
-</p>
+MIT

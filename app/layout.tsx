@@ -11,7 +11,7 @@ const brandFont = Orbitron({
 export const metadata: Metadata = {
   title: "SilentSOS — When you can't speak, AI speaks for you",
   description:
-    "Voice AI emergency relay prototype powered by ElevenLabs Speech Engine. Simulation only — not connected to real emergency services.",
+    "Voice AI emergency relay with D-ID avatar and ElevenAgents. Simulation only — not connected to real emergency services.",
   icons: {
     icon: [{ url: "/silentsos-logo.png", type: "image/png" }],
     apple: [{ url: "/silentsos-logo.png", type: "image/png" }],
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SilentSOS",
     description:
-      "When you can't speak, AI speaks for you. Voice relay prototype powered by ElevenLabs Speech Engine.",
+      "When you can't speak, AI speaks for you. D-ID avatar relay powered by ElevenAgents.",
     images: ["/silentsos-logo.png"],
   },
 };

@@ -7,16 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "speech-engine": "node --env-file=.env.local engine/server.mjs",
-    "start:engine": "node server/speech-engine.mjs",
-    "create-engine": "node --env-file=.env.local scripts/create-engine.mjs"
+    "create-elevenlabs-agent": "node --env-file=.env.local scripts/create-elevenlabs-agent.mjs",
+    "create-did-agent": "node --env-file=.env.local scripts/create-did-agent.mjs"
   },
   "engines": {
     "node": "20.x"
   },
   "dependencies": {
+    "@d-id/client-sdk": "^1.1.71",
     "@elevenlabs/elevenlabs-js": "^2.49.1",
-    "@elevenlabs/react": "^1.6.3",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",

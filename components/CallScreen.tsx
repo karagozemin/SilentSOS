@@ -1,14 +1,17 @@
 "use client";
 
-import { BrandLogo } from "@/components/BrandLogo";
 import type { ConversationPhase } from "@/lib/types";
+import type { RefObject } from "react";
 
 type Props = {
   phase: ConversationPhase;
   isConnected: boolean;
   isSpeaking: boolean;
   isDemoMode: boolean;
-  inputLevel: number;
+  cameraEnabled: boolean;
+  enableCamera: boolean;
+  onEnableCameraChange: (enabled: boolean) => void;
+  videoRef: RefObject<HTMLVideoElement | null>;
   onStart: () => void;
   onStop: () => void;
   onStartDemo: () => void;
@@ -29,7 +32,10 @@ export function CallScreen({
   isConnected,
   isSpeaking,
   isDemoMode,
-  inputLevel,
+  cameraEnabled,
+  enableCamera,
+  onEnableCameraChange,
+  videoRef,
   onStart,
   onStop,
   onStartDemo,
@@ -38,42 +44,56 @@ export function CallScreen({
 
   return (
     <section className="flex h-full flex-col items-center justify-center rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-950 to-black p-6">
-      <div className="mb-6 text-center">
+      <div className="mb-4 text-center">
         <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
           SilentSOS Relay
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-white lg:text-3xl">
           When you can&apos;t speak,
           <span className="block text-red-500">AI speaks for you.</span>
         </h1>
+        <p className="mt-2 text-xs text-zinc-500">
+          D-ID avatar · ElevenAgents voice relay
+        </p>
       </div>
 
-      <div className="relative mb-8 flex size-48 items-center justify-center">
+      <div className="relative mb-6 w-full max-w-sm">
         <div
-          className={`absolute inset-0 rounded-full border-2 ${
-            active ? "border-red-500/40 animate-pulse-slow" : "border-zinc-800"
-          }`}
-        />
-        <div
-          className={`absolute inset-4 rounded-full border ${
-            isSpeaking ? "border-red-400/60 animate-ping-slow" : "border-zinc-700"
-          }`}
-        />
-        <div
-          className={`relative z-10 flex size-[7.5rem] items-center justify-center overflow-hidden rounded-full ${
-            active ? "shadow-[0_0_80px_rgba(220,38,38,0.25)]" : ""
+          className={`relative aspect-[4/5] overflow-hidden rounded-2xl border-2 bg-black shadow-[0_0_60px_rgba(220,38,38,0.15)] ${
+            active ? "border-red-500/50" : "border-zinc-800"
           }`}
         >
-          <BrandLogo
-            size={120}
-            className={`size-full object-cover object-center transition-transform duration-300 ${
-              isSpeaking ? "scale-105" : "scale-100"
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={false}
+            className={`size-full object-cover transition-opacity duration-300 ${
+              active ? "opacity-100" : "opacity-40"
             }`}
           />
+          {!active && (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/70">
+              <p className="px-6 text-center text-sm text-zinc-400">
+                Your calm relay agent appears here — face, voice, and presence
+                when you need help most.
+              </p>
+            </div>
+          )}
+          {isSpeaking && (
+            <div className="absolute bottom-3 left-3 rounded-full border border-red-500/30 bg-black/60 px-3 py-1 text-xs text-red-300">
+              Speaking for you
+            </div>
+          )}
+          {cameraEnabled && (
+            <div className="absolute right-3 top-3 rounded-full border border-emerald-500/30 bg-black/60 px-3 py-1 text-xs text-emerald-300">
+              Camera on — agent can see
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="mb-6 flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/80 px-4 py-2">
+      <div className="mb-4 flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/80 px-4 py-2">
         <span
           className={`h-2 w-2 rounded-full ${
             active ? "bg-red-500 animate-pulse" : "bg-zinc-600"
@@ -81,20 +101,25 @@ export function CallScreen({
         />
         <span className="text-sm text-zinc-300">{phaseLabels[phase]}</span>
         {isSpeaking && (
-          <span className="text-xs text-red-400">· AI speaking</span>
+          <span className="text-xs text-red-400">· Avatar active</span>
         )}
       </div>
 
-      {isConnected && (
-        <div className="mb-4 flex w-full max-w-sm items-center gap-3">
-          <span className="text-xs text-zinc-500">Mic</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-            <div
-              className="h-full rounded-full bg-red-500 transition-[width] duration-75"
-              style={{ width: `${Math.min(100, Math.round(inputLevel * 100))}%` }}
-            />
-          </div>
-        </div>
+      {!active && (
+        <label className="mb-4 flex max-w-sm cursor-pointer items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={enableCamera}
+            onChange={(event) => onEnableCameraChange(event.target.checked)}
+            className="size-4 rounded border-zinc-600 bg-zinc-900 accent-red-500"
+          />
+          <span>
+            Let the agent see me via webcam
+            <span className="mt-0.5 block text-xs text-zinc-500">
+              Optional — helps the relay agent react to visible distress
+            </span>
+          </span>
+        </label>
       )}
 
       <div className="flex w-full max-w-sm flex-col gap-3">
@@ -127,8 +152,8 @@ export function CallScreen({
       </div>
 
       <p className="mt-6 max-w-xs text-center text-xs text-zinc-600">
-        Speak naturally or whisper. Use headphones to avoid echo. The AI relay
-        agent will communicate on your behalf to a simulated dispatch operator.
+        Speak naturally or whisper. The D-ID avatar relays your situation to a
+        simulated dispatch operator via ElevenAgents. Simulation only.
       </p>
     </section>
   );

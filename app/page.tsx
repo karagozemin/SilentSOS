@@ -15,9 +15,9 @@ export default function Home() {
           </p>
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.3em] text-red-500">
-              ElevenHacks #10
+              ElevenHacks #11
             </p>
-            <p className="text-sm text-zinc-500">ElevenLabs Speech Engine</p>
+            <p className="text-sm text-zinc-500">D-ID Avatar · ElevenAgents</p>
           </div>
         </div>
       </header>

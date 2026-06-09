@@ -1,22 +1,18 @@
 import type { EmergencyProfile } from "@/lib/types";
 
-export async function wakeEngineServer(): Promise<void> {
-  const response = await fetch("/api/engine-health", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error("Speech Engine server is unavailable — try again in a few seconds");
-  }
-}
-
-export async function syncProfileToEngine(
+export async function syncAgentProfile(
   profile: EmergencyProfile,
 ): Promise<void> {
-  const response = await fetch("/api/profile", {
+  const response = await fetch("/api/agent-profile", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(profile),
   });
 
   if (!response.ok) {
-    throw new Error("Failed to sync emergency profile to Speech Engine server");
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string }
+      | null;
+    throw new Error(body?.error ?? "Failed to sync profile to ElevenAgents");
   }
 }

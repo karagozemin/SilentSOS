@@ -4,11 +4,9 @@ import { CallScreen } from "@/components/CallScreen";
 import { DispatchPanel } from "@/components/DispatchPanel";
 import { EmergencyProfileForm } from "@/components/EmergencyProfile";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
-import { FIRST_MESSAGE } from "@/lib/agent-prompt";
-import { cancelDemoSpeech, initDemoSpeech, speakDemoLine } from "@/lib/demo-speech";
 import { DEMO_SCRIPT, getDispatchFromAgent, getDispatchFromUser } from "@/lib/dispatch-script";
 import { normalizeAgentSpeech } from "@/lib/sanitize-agent-speech";
-import { syncProfileToEngine, wakeEngineServer } from "@/lib/sync-profile";
+import { syncAgentProfile } from "@/lib/sync-profile";
 import type {
   ConversationPhase,
   DispatchMessage,
@@ -16,7 +14,7 @@ import type {
   TranscriptEntry,
 } from "@/lib/types";
 import { DEFAULT_PROFILE } from "@/lib/types";
-import { useConversation } from "@elevenlabs/react";
+import { useDidAgent } from "@/lib/use-did-agent";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "silentsos-profile";
@@ -36,14 +34,6 @@ function loadStoredProfile(): EmergencyProfile {
   }
 }
 
-function isUserMessage(role?: string, source?: string) {
-  return role === "user" || source === "user";
-}
-
-function isAgentMessage(role?: string, source?: string) {
-  return role === "agent" || source === "ai";
-}
-
 export function SilentSOSApp() {
   const [profile, setProfile] = useState<EmergencyProfile>(loadStoredProfile);
   const [phase, setPhase] = useState<ConversationPhase>("idle");
@@ -52,11 +42,10 @@ export function SilentSOSApp() {
     [],
   );
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [demoSpeaking, setDemoSpeaking] = useState(false);
-  const [inputLevel, setInputLevel] = useState(0);
+  const [enableCamera, setEnableCamera] = useState(false);
   const demoAbortRef = useRef(false);
-  const demoTimeouts = useRef<number[]>([]);
-  const levelFrameRef = useRef<number | null>(null);
+  const isDemoModeRef = useRef(false);
+  const processedMessageIds = useRef<Set<string>>(new Set());
 
   const addEntry = useCallback(
     (role: TranscriptEntry["role"], content: string) => {
@@ -80,12 +69,8 @@ export function SilentSOSApp() {
       const cleaned = normalizeAgentSpeech(text);
       addEntry("agent", cleaned);
       const { response, nextPhase } = getDispatchFromAgent(cleaned);
-      if (response) {
-        addDispatch(response);
-      }
-      if (nextPhase) {
-        setPhase(nextPhase);
-      }
+      if (response) addDispatch(response);
+      if (nextPhase) setPhase(nextPhase);
     },
     [addDispatch, addEntry],
   );
@@ -95,138 +80,114 @@ export function SilentSOSApp() {
       addEntry("user", text);
       setPhase("user_distress");
       const { response, nextPhase } = getDispatchFromUser(text);
-      if (response) {
-        addDispatch(response);
-      }
-      if (nextPhase) {
-        setPhase(nextPhase);
-      }
+      if (response) addDispatch(response);
+      if (nextPhase) setPhase(nextPhase);
     },
     [addDispatch, addEntry],
   );
 
-  const conversation = useConversation({
+  const processIncomingMessages = useCallback(
+    (
+      messages: Array<{ id?: string; role?: string; content?: string }>,
+      type: "answer" | "user",
+    ) => {
+      for (const message of messages) {
+        if (!message.content || !message.id) continue;
+        if (processedMessageIds.current.has(message.id)) continue;
+        processedMessageIds.current.add(message.id);
+
+        if (type === "user" || message.role === "user") {
+          handleUserText(message.content);
+        } else if (message.role === "assistant") {
+          handleAgentText(message.content);
+        }
+      }
+    },
+    [handleAgentText, handleUserText],
+  );
+
+  const didAgent = useDidAgent({
     onConnect: () => {
       setPhase("listening");
-      addEntry("system", "Voice connection established — speak now");
+      addEntry("system", "Avatar connected — speak or whisper");
     },
-    onDisconnect: (details) => {
-      setPhase("idle");
-      if (details.reason === "error") {
-        addEntry("system", `Call dropped: ${details.message}`);
-      } else {
+    onDisconnect: () => {
+      if (!isDemoModeRef.current) {
+        setPhase("idle");
         addEntry("system", "Call ended");
       }
     },
     onError: (message) => {
       addEntry("system", `Error: ${message}`);
       setPhase("idle");
+      setIsDemoMode(false);
     },
-    onModeChange: ({ mode }) => {
-      if (mode === "listening") setPhase("listening");
-    },
-    onInterruption: () => {
-      setPhase("listening");
-    },
-    onMessage: ({ message, role, source }) => {
-      if (!message) return;
-
-      if (isUserMessage(role, source)) {
-        handleUserText(message);
-      } else if (isAgentMessage(role, source)) {
-        handleAgentText(message);
-      } else {
-        addEntry("agent", normalizeAgentSpeech(message));
-      }
+    onNewMessage: (messages, type) => {
+      if (type === "partial") return;
+      processIncomingMessages(messages, type);
     },
   });
 
-  const clearDemoTimeouts = useCallback(() => {
-    demoTimeouts.current.forEach((id) => window.clearTimeout(id));
-    demoTimeouts.current = [];
-  }, []);
-
   const resetSession = useCallback(() => {
     demoAbortRef.current = true;
-    clearDemoTimeouts();
-    cancelDemoSpeech();
-    setDemoSpeaking(false);
+    isDemoModeRef.current = false;
+    processedMessageIds.current.clear();
     setIsDemoMode(false);
     setPhase("idle");
     setEntries([]);
     setDispatchMessages([]);
-  }, [clearDemoTimeouts]);
-
-  const syncProfile = useCallback(async (nextProfile: EmergencyProfile) => {
-    await syncProfileToEngine(nextProfile);
   }, []);
 
   const startCall = useCallback(async () => {
     resetSession();
+    demoAbortRef.current = false;
     setPhase("connecting");
 
     try {
-      addEntry("system", "Checking Speech Engine server…");
-      await wakeEngineServer();
-      await syncProfile(profile);
-
-      const tokenRes = await fetch("/api/token", { method: "POST" });
-      if (!tokenRes.ok) {
-        const body = (await tokenRes.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(body?.error ?? "Failed to get conversation token");
-      }
-      const { token } = (await tokenRes.json()) as { token: string };
-
-      conversation.startSession({
-        conversationToken: token,
-        overrides: {
-          agent: {
-            firstMessage: FIRST_MESSAGE,
-          },
-        },
+      addEntry("system", "Syncing profile to ElevenAgents…");
+      await syncAgentProfile(profile);
+      await didAgent.connect({
+        enableCamera,
+        enableMicrophone: true,
       });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to start call";
       addEntry("system", message);
       setPhase("idle");
+      await didAgent.disconnect();
     }
-  }, [addEntry, conversation, profile, resetSession, syncProfile]);
+  }, [addEntry, didAgent, enableCamera, profile, resetSession]);
 
   const stopCall = useCallback(async () => {
-    clearDemoTimeouts();
-    if (isDemoMode) {
-      resetSession();
-      return;
-    }
-    conversation.endSession();
-    setPhase("idle");
-    setIsDemoMode(false);
-  }, [clearDemoTimeouts, conversation, isDemoMode, resetSession]);
+    demoAbortRef.current = true;
+    await didAgent.disconnect();
+    resetSession();
+  }, [didAgent, resetSession]);
 
-  const startDemo = useCallback(() => {
+  const startDemo = useCallback(async () => {
     resetSession();
     demoAbortRef.current = false;
+    isDemoModeRef.current = true;
     setIsDemoMode(true);
     setPhase("connecting");
 
-    const run = async () => {
+    try {
+      await syncAgentProfile(profile);
+      await didAgent.connect({ enableMicrophone: false, enableCamera: false });
+
       for (const step of DEMO_SCRIPT) {
         if (demoAbortRef.current) return;
 
         if (step.pauseMs > 0) {
-          await new Promise((r) => setTimeout(r, step.pauseMs));
+          await new Promise((resolve) => setTimeout(resolve, step.pauseMs));
         }
         if (demoAbortRef.current) return;
 
         if (step.phase) setPhase(step.phase);
         addEntry(step.role, step.content);
 
-        if (step.role === "dispatch") {
-          addDispatch(step.content);
-        }
+        if (step.role === "dispatch") addDispatch(step.content);
         if (step.role === "user") {
           const { response, nextPhase } = getDispatchFromUser(step.content);
           if (response) addDispatch(response);
@@ -236,76 +197,44 @@ export function SilentSOSApp() {
           const { response, nextPhase } = getDispatchFromAgent(step.content);
           if (response) addDispatch(response);
           if (nextPhase) setPhase(nextPhase);
+          await didAgent.speak(step.content);
         }
-
-        if (step.role === "agent" || step.role === "dispatch") {
-          setDemoSpeaking(true);
-        }
-
-        await speakDemoLine(step.role, step.content);
-
-        if (demoAbortRef.current) return;
-        setDemoSpeaking(false);
       }
-    };
-
-    void run();
-  }, [addDispatch, addEntry, resetSession]);
-
-  useEffect(() => {
-    initDemoSpeech();
-  }, []);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Demo mode failed";
+      addEntry("system", message);
+    } finally {
+      if (!demoAbortRef.current) {
+        addEntry("system", "Demo complete — simulation only");
+      }
+    }
+  }, [addDispatch, addEntry, didAgent, profile, resetSession]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    void syncProfile(profile);
-  }, [profile, syncProfile]);
+    void syncAgentProfile(profile);
+  }, [profile]);
 
-  useEffect(() => {
-    return () => clearDemoTimeouts();
-  }, [clearDemoTimeouts]);
-
-  useEffect(() => {
-    const isConnected = conversation.status === "connected";
-    if (!isConnected) {
-      setInputLevel(0);
-      if (levelFrameRef.current !== null) {
-        cancelAnimationFrame(levelFrameRef.current);
-        levelFrameRef.current = null;
-      }
-      return;
-    }
-
-    const tick = () => {
-      setInputLevel(conversation.getInputVolume());
-      levelFrameRef.current = requestAnimationFrame(tick);
-    };
-
-    levelFrameRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (levelFrameRef.current !== null) {
-        cancelAnimationFrame(levelFrameRef.current);
-        levelFrameRef.current = null;
-      }
-    };
-  }, [conversation.status, conversation.getInputVolume]);
-
-  const isConnected = conversation.status === "connected";
+  const active = didAgent.isConnected || isDemoMode;
 
   return (
     <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px_1fr_320px]">
       <EmergencyProfileForm
         profile={profile}
         onChange={setProfile}
-        disabled={isConnected || isDemoMode}
+        disabled={active}
       />
 
       <CallScreen
         phase={phase}
-        isConnected={isConnected}
-        isSpeaking={conversation.isSpeaking || demoSpeaking}
+        isConnected={didAgent.isConnected}
+        isSpeaking={didAgent.isSpeaking}
         isDemoMode={isDemoMode}
-        inputLevel={inputLevel}
+        cameraEnabled={didAgent.cameraEnabled}
+        enableCamera={enableCamera}
+        onEnableCameraChange={setEnableCamera}
+        videoRef={didAgent.videoRef}
         onStart={startCall}
         onStop={stopCall}
         onStartDemo={startDemo}
